@@ -23,5 +23,8 @@ int main () {
   char ch = 'a';
   char *ptr_ch = &ch;
   short s = 20;
-  foo(ptr_ch,s);
+  foo(ptr_ch,s);//普通方式调用重载关系的函数,根据函数实参与形参的类型匹配度决定的
+  void(*ptr)(const char *,short) = &foo;
+  (*ptr)(ptr_ch,s);//函数指针调用重载关系的函数,是根据函数指针的类型确定调用那个函数
+                   //因为函数指针类型是由返回值与形参列表决定的
 }
