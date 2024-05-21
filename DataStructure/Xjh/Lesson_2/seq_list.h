@@ -2,6 +2,7 @@
 #define _SEQUENCE_H_
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <stddef.h>
 #include <unistd.h>
 /*静态顺序表
@@ -53,6 +54,10 @@ void init_seq_list_object(seq_list_t* seq_list,size_t capicity);
 void print_seq_list(seq_list_t* seq_list);
 
 /*-----print seq_list-----*/
+
+/*-----expansion seq_list-----*/
+void expansion_seq_list(seq_list_t* seq_list);
+/*-----expansion seq_list-----*/
 
 /*-----Insert Start-----*/
 
