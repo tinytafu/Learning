@@ -9,22 +9,29 @@ int main () {
   pid_t pid = fork();
   
   if(0 == pid) {
+    int cnt = 4;
     while(1){
       printf("我是子进程,我现在正在运行!pid = %d\n",getpid());
       // int *pointer;
       // *pointer = 10;
       // printf("我没执行");
+      if(!cnt)
+        break;
+      cnt--;  
     }
+    exit(13);
   }else {
     //保存进程退出信息
     int status = 0;
     printf("我准备等待子进程了,注意查看现象\n");
     // pid_t ret = wait(&status);
     pid_t ret = waitpid(pid, &status, 0);
-    if(0 > ret ) {
-      printf("等待失败!");
-    }else {
-      printf("waitpid等待成功,等待成功的子进程pid = %d,子进程的退出状态码exit_code = %d,子进程的退出信号是%d\n",ret,(status >> 8)&0xFF,status & 0x7F);
+    // if(0 > ret ) {
+    //   printf("等待失败!");
+    // }else {
+    //   printf("waitpid等待成功,等待成功的子进程pid = %d,子进程的退出状态码exit_code = %d,子进程的退出信号是%d\n",ret,(status >> 8)&0xFF,status & 0x7F);
+    if (WIFEXITED(status)) {
+      printf("子进程正常退出,退出码为%d\n",WEXITSTATUS(status));
     }
   }
 }
