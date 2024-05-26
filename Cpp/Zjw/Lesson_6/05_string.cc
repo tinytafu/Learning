@@ -1,5 +1,5 @@
-#include <iostream>
 #include <cstring>
+#include <iostream>
 using namespace std;
 
 class tofu_string {
@@ -31,27 +31,31 @@ private:
   char *m_psz;
 };
 int main() {
-  //1.call constructor function with default argument
+  // 1.call constructor function with default argument
   tofu_string ts1;
   cout << "ts1 is " << ts1.c_str() << endl;
   tofu_string ts2("hello world");
-  cout << "ts2 is " << ts2.c_str() <<endl;
-  //2.call copy constructor function
-  tofu_string ts3 = ts2;//--> tofu_string s2(s1);
+  cout << "ts2 is " << ts2.c_str() << endl;
+  // 2.call copy constructor function
+  tofu_string ts3 = ts2; //--> tofu_string s2(s1);
   cout << "ts3 is " << ts3.c_str() << endl;
-  cout << "&ts3->m_psz is " << reinterpret_cast<void*>(const_cast<char*>(ts3.c_str())) << endl;
-  cout << "&ts2->m_psz is " << reinterpret_cast<void*>(const_cast<char*>(ts2.c_str())) << endl;
+  cout << "&ts3->m_psz is "
+       << reinterpret_cast<void *>(const_cast<char *>(ts3.c_str())) << endl;
+  cout << "&ts2->m_psz is "
+       << reinterpret_cast<void *>(const_cast<char *>(ts2.c_str())) << endl;
 
-  //3.call copy and assignment function
-  tofu_string ts4;//-->3.1call constructor function with default argument
-  ts4 = ts3;//-->3.2 call copy and assignment function
+  // 3.call copy and assignment function
+  tofu_string ts4; //-->3.1call constructor function with default argument
+  ts4 = ts3;       //-->3.2 call copy and assignment function
   cout << "ts4 is " << ts4.c_str() << endl;
-  cout << "&ts4->m_psz is " << reinterpret_cast<void*>(const_cast<char*>(ts4.c_str())) << endl;
-  cout << "&ts3->m_psz is " << reinterpret_cast<void*>(const_cast<char*>(ts3.c_str())) << endl;
-  //4.RVO
+  cout << "&ts4->m_psz is "
+       << reinterpret_cast<void *>(const_cast<char *>(ts4.c_str())) << endl;
+  cout << "&ts3->m_psz is "
+       << reinterpret_cast<void *>(const_cast<char *>(ts3.c_str())) << endl;
+  // 4.RVO
   tofu_string ts5 = "hello wangshuai";
   cout << "ts5 is " << ts5.c_str() << endl;
-  //5.call copy and assignment function
-  tofu_string ts6;//5.1 call constructor function with default argument
-  ts6 = "wangshuai";//5.2 call copy and assignment function
+  // 5.call copy and assignment function
+  tofu_string ts6;   // 5.1 call constructor function with default argument
+  ts6 = "wangshuai"; // 5.2 call copy and assignment function
 }
