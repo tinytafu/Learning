@@ -1,7 +1,8 @@
+all:=target
 SRUS:=$(wildcard *.c)
 OBJS:=$(patsubst %.c,%.o,$(SRUS))
 CC:=gcc
-target:$(OBJS)
+$(all):$(OBJS)
 	$(CC) $^ -o $@
 %.o:%.c
 	$(CC) -c $^ -o $@
@@ -13,5 +14,5 @@ target:$(OBJS)
 #gcc -c add.c -o add.o
 .PHONY:clean rebuild
 clean:
-	rm -rf $(OBJS) target
+	rm -rf $(OBJS) $(all)
 rebuild:clean target
