@@ -2,6 +2,7 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <stdio.h>
+#include <strings.h>
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -31,6 +32,7 @@ int main(int argc, char *argv[]) {
   // printf("clint: ip is %s,port is %d\n", inet_ntoa(addr.sin_addr),
   // ntohs(addr.sin_port));
 
+  char buf[4096];
   // 设置监听集合
   fd_set rdset;
   while (1) {
@@ -43,17 +45,20 @@ int main(int argc, char *argv[]) {
     select(netfd + 1, &rdset, NULL, NULL, 0);
     // 判断就绪集合中的对象是谁
     if (FD_ISSET(netfd, &rdset)) {
-      char buf[4096] = {0};
+      bzero(buf, sizeof(buf));
       // 读取文件对象中读缓冲区的数据
       ssize_t rret = recv(netfd, buf, sizeof(buf), 0);
+      if (rret == 0) {
+        break;
+      }
       ERROR_CHECK(rret, -1, "rret");
       // 输出数据到控制台
       ssize_t wret = write(STDOUT_FILENO, buf, rret);
       ERROR_CHECK(wret, -1, "write");
     }
     if (FD_ISSET(STDIN_FILENO, &rdset)) {
+      bzero(buf, sizeof(buf));
       // 读取标准输入的数据
-      char buf[4096] = {0};
       ssize_t rret = read(STDIN_FILENO, buf, sizeof(buf));
       ERROR_CHECK(rret, -1, "read");
       // 将读取到的数据发送到socket文件对象中的写缓冲区中
