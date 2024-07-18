@@ -33,6 +33,7 @@ int main(int argc, char *argv[]) {
       bzero(buf, sizeof(buf));
       int ret_recv = recv(sockfd, buf, sizeof(buf), 0);
       if (ret_recv == 0) {
+        printf("I am disconnect!\n");
         break;
       }
       ERROR_CHECK(ret_recv, -1, "recv");
