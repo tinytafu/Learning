@@ -1,0 +1,14 @@
+syntax = "proto3";
+// import "phone.proto";
+package tofu;
+message peopleInfo {
+  // 姓名
+  string name = 1;
+  // 年龄
+  int32 age = 2;
+  message phone { string numbers = 1; }
+  // 电话信息(可能有多个)
+  repeated phone phone_numbers = 3;
+}
+
+message contact { repeated peopleInfo people_info = 1; }

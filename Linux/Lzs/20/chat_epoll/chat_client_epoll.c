@@ -51,6 +51,10 @@ int main(int argc, char *argv[]) {
         // 定义一个变量保存读取到的端口号
         uint16_t port;
         int ret_recv = recv(sockfd, &port, sizeof(port), 0);
+        if (ret_recv == 0) {
+          printf("hehe\n");
+          exit(-1);
+        }
         ERROR_CHECK(ret_recv, -1, "recv");
         // 定义一个变量保存读取到的ip地址
         struct in_addr ip;

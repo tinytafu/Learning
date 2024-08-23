@@ -1,0 +1,11 @@
+// 定义语法版本
+syntax = "proto3";
+// 定义一个package
+package tofu;
+
+// 定义一个消息
+message peopleInfo {
+  // 消息的属性
+  string name = 1;
+  int32 age = 2;
+};

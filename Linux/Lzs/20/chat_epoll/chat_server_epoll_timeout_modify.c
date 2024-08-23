@@ -1,6 +1,7 @@
 // epoll的聊天室
 #include <sys/epoll.h>
 #include <sys/socket.h>
+#include <time.h>
 #include <tytofu.h>
 #define NUM 1024
 // 与客户端通信的连接的数据类型
@@ -123,9 +124,13 @@ int main(int argc, char *argv[]) {
   // 定义保存客户端信息的对象
   struct sockaddr_in client_addr;
   socklen_t length = sizeof(client_addr);
+  // 保存超时或者事件就绪的时间
+  time_t now;
   while (1) {
     // 调用epoll_wait开启等待进行轮询
-    int fd_number = epoll_wait(epfd, ready_set, 1024, -1);
+    int fd_number = epoll_wait(epfd, ready_set, 1024, 1000);
+    now = time(NULL);
+    printf("%s\n", ctime(&now));
     ERROR_CHECK(fd_number, -1, "epoll_wait");
     // fd_number是就绪集合中的个数,只需要对ready_set遍历即可
     // 因为ready_set中都是就绪的事件
@@ -141,54 +146,89 @@ int main(int argc, char *argv[]) {
         // 将此连接添加到哈希表建立映射关系
         fd_to_index[netfd] = sequence.size;
         // 将此连接添加到顺序表
-        push_back(&sequence, netfd, 0, client_addr);
+        push_back(&sequence, netfd, now, client_addr);
       } else {
         // 这个循环的目的是为了知道此时就绪的文件对象在顺序表中的下标.
         // 且还是对未就绪的对象遍历了一次,这样的效率就和select差不多了
         // 浪费了epoll的高性能
         // 但其实通过哈希表中的映射关系就可以找到下标,无需在循环一次.
+        int netfd = ready_set[i].data.fd;
+        // 利用netfd找到在顺序表对应的下标
+        int index = fd_to_index[netfd];
+        // 更新就绪时间
+        sequence.data[index].now = time(NULL);
+        bzero(buf, sizeof(buf));
+        // 读取读缓冲区的数据
+        int ret_recv = recv(sequence.data[index].fd, buf, sizeof(buf), 0);
+        ERROR_CHECK(ret_recv, -1, "recv");
+        if (ret_recv == 0) {
+          // 移除监听列表
+          int ret_epoll_ctl =
+              epoll_ctl(epfd, EPOLL_CTL_DEL, sequence.data[index].fd, NULL);
+          ERROR_CHECK(ret_epoll_ctl, -1, "epoll_ctl");
+          // 关闭通信文件对象
+          close(sequence.data[index].fd);
+          // 移除映射关系
+          fd_to_index[sequence.data[index].fd] = -1;
+          // 将其从顺序表删除
+          delete_pos(&sequence, index);
+          // 若关闭的文件对象的下标在顺序表的最后一个,
+          // 那么可直接映射关系,不需要考虑覆盖问题
+          // 这个size是删除后的,所以不需要减去1
+          if (sequence.size != index) {
+            // 移除映射关系的同时,还需要考虑哈希表中其他文件对象的映射关系
+            // 还是需要考虑使用循环遍历删除后剩余的顺序表元素
+            // 使用顺序表剩余的元素的文件描述符去遍历哈希表,使它们的值都减去1
+            // 做到与顺序表删除一个元素之后的一一对应
+            for (int j = 0; j < sequence.size; j++) {
+              fd_to_index[sequence.data[j].fd] -= 1;
+            }
+          }
+          // 将其从顺序表中移除
+          continue;
+        }
         for (int j = 0; j < sequence.size; j++) {
-          if (ready_set[i].data.fd == sequence.data[j].fd) {
-            bzero(buf, sizeof(buf));
-            // 读取读缓冲区的数据
-            int ret_recv = recv(sequence.data[j].fd, buf, sizeof(buf), 0);
-            ERROR_CHECK(ret_recv, -1, "recv");
-            if (ret_recv == 0) {
-              // 移除监听列表
-              int ret_epoll_ctl =
-                  epoll_ctl(epfd, EPOLL_CTL_DEL, sequence.data[j].fd, NULL);
-              ERROR_CHECK(ret_epoll_ctl, -1, "epoll_ctl");
-              // 关闭通信文件对象
-              close(sequence.data[j].fd);
-              // 将其从顺序表中移除
-              delete_pos(&sequence, j);
-              // 移除映射关系
-              fd_to_index[sequence.data[j].fd] = -1;
-              break;
-            }
-            for (int k = 0; k < sequence.size; k++) {
-              if (k != j) {
-                // 这里strcat不出现段错误的原因是name存储的是一块堆内存,inet_ntoa函数
-                // 返回的是保存若干字符数据的堆内存的首地址,是可被修改的区域
-                // 但是若name存储的是可读区域中的首地址,那么就出现段错误
-                /* char *name =
-                inet_ntoa(sequence.data[j].client_addr.sin_addr); char
-                *client_name = strcat(name, ": "); */
-                // 发送端口号
-                int ret_write = write(
-                    sequence.data[k].fd, &sequence.data[k].client_addr.sin_port,
-                    sizeof(sequence.data[k].client_addr.sin_port));
-                ERROR_CHECK(ret_write, -1, "write");
-                // 发送客户端ip
-                int ret_send = send(
-                    sequence.data[k].fd, &sequence.data[k].client_addr.sin_addr,
-                    sizeof(sequence.data[k].client_addr.sin_addr), 0);
-                ERROR_CHECK(ret_send, -1, "send");
-                // 发送实际数据
-                ret_send = send(sequence.data[k].fd, buf, ret_recv, 0);
-                ERROR_CHECK(ret_send, -1, "send");
-              }
-            }
+          if (index != j) {
+            // 这里strcat不出现段错误的原因是name存储的是一块堆内存,inet_ntoa函数
+            // 返回的是保存若干字符数据的堆内存的首地址,是可被修改的区域
+            // 但是若name存储的是可读区域中的首地址,那么就出现段错误
+            /* char *name =
+            inet_ntoa(sequence.data[j].client_addr.sin_addr); char
+            *client_name = strcat(name, ": "); */
+            // 发送端口号
+            int ret_send = send(
+                sequence.data[j].fd, &sequence.data[j].client_addr.sin_port,
+                sizeof(sequence.data[j].client_addr.sin_port), 0);
+            ERROR_CHECK(ret_send, -1, "send");
+            // 发送客户端ip
+            ret_send = send(sequence.data[j].fd,
+                            &sequence.data[j].client_addr.sin_addr,
+                            sizeof(sequence.data[j].client_addr.sin_addr), 0);
+            ERROR_CHECK(ret_send, -1, "send");
+            // 发送实际数据
+            ret_send = send(sequence.data[j].fd, buf, ret_recv, 0);
+            ERROR_CHECK(ret_send, -1, "send");
+          }
+        }
+      }
+    }
+    // 查看各个连接上来的客户端是否超时
+    for (int i = 0; i < sequence.size; i++) {
+      if (now - sequence.data[i].now > 10) {
+        // 移除监听集合
+        int ret_epoll_ctl =
+            epoll_ctl(epfd, EPOLL_CTL_DEL, sequence.data[i].fd, NULL);
+        ERROR_CHECK(ret_epoll_ctl, -1, "epoll_ctl");
+        // 关闭文件对象
+        close(sequence.data[i].fd);
+        // 移除哈希表映射
+        fd_to_index[sequence.data[i].fd] = -1;
+        // 在顺序表移除此元素
+        delete_pos(&sequence, i);
+        // 移除之后需要考虑哈希表映射问题
+        if (sequence.size != i) {
+          for (int j = 0; j < sequence.size; j++) {
+            fd_to_index[sequence.data[j].fd] -= 1;
           }
         }
       }
