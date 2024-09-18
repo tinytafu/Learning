@@ -1,7 +1,7 @@
 target := second_make
 LIBS := -lpthread
 $(target): second_make.cc 
-	@echo "build begin $(target)"
+@echo "build begin $(target)"
 	@$(CXX) $^ -o $@ $(LIBS)
 	@echo "build end"
 
